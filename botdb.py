@@ -2,16 +2,15 @@ import psycopg2
 import os
 
 __connection = None
-
+dbname = os.getenv('DBNAME')
+user = os.getenv('DBUSER')
+password = os.getenv('DBPASSWORD')
+host = os.getenv('DBHOST')
 
 
 def get_connection():
     global __connection
 
-    dbname = os.getenv('DBNAME')
-    user = os.getenv('DBUSER')
-    password = os.getenv('DBPASSWORD')
-    host = os.getenv('DBHOST')
     if __connection is None:
         __connection = psycopg2.connect(dbname=dbname, user=user,
                                         password=password,
