@@ -2,16 +2,19 @@ import telebot
 from telebot import types
 from collections import defaultdict
 from math import pi, cos, asin, sqrt
-from botdb import init_db, add_place, get_location, get_data_by_location, drop_users_data
+from botdb import init_db, add_place, get_location, get_data_by_location, drop_users_data, get_last_locations
 import os
 
 token = os.getenv('TOKEN', 'Token not found')
-default_reply = "Похоже такой команды нет."
+default_reply = "Похоже, такой команды нет."
 start_command_text = """
-Вот что я умею:
-    /add - добавить новые места и фото к ним
-    /list - список ближайших добавленных мест
-    /reset - удалить все сохраненные места"""
+*Вот что я умею:*
+/add - добавить новые места и фото к ним
+/nearest - ближайшие добавленные места
+/list - последние добавленные места
+/reset - удалить все сохраненные места
+"""
+
 bot = telebot.TeleBot(token)
 init_db()
 
@@ -77,13 +80,28 @@ def find_nearest_locations(current_location, user_locations):
     return nearest_locations_id
 
 
+def send_data_to_user(message, data):
+    counter = 1
+    for row in data:
+        bot.send_message(message.chat.id, text=f'*Место №{counter}*', parse_mode='Markdown')
+        counter += 1
+
+        lat, lon = row[0].strip('()').split(',')
+        bot.send_location(chat_id=message.chat.id, latitude=lat, longitude=lon)
+        bot.send_message(chat_id=message.chat.id, text=row[1])
+
+        if row[2] is not None:
+            photo = bytes(row[2])
+            bot.send_photo(chat_id=message.chat.id, photo=photo)
+
+
 @bot.message_handler(commands=['reset'])
 def reset_data(message):
     keyboard = create_keyboard_reset()
     bot.send_message(chat_id=message.chat.id, text='Удалить все данные?', reply_markup=keyboard)
 
 
-@bot.message_handler(commands=['list'])
+@bot.message_handler(commands=['nearest'])
 def get_saved(message):
     bot.send_message(chat_id=message.chat.id, text='Отправьте локацию')
     update_state(USER_STATE_LIST, message, FIRST_STEP)
@@ -97,18 +115,7 @@ def get_nearest(message):
     locations_id = find_nearest_locations(current_location, user_locations)
     if any(locations_id):
         data = get_data_by_location(message.chat.id, locations_id)
-        counter = 1
-        for row in data:
-            bot.send_message(message.chat.id, text='Место №' + str(counter))
-            counter += 1
-
-            lat, lon = row[0].strip('()').split(',')
-            bot.send_location(chat_id=message.chat.id, latitude=lat, longitude=lon)
-            bot.send_message(chat_id=message.chat.id, text=row[1])
-
-            if row[2] is not None:
-                photo = bytes(row[2])
-                bot.send_photo(chat_id=message.chat.id, photo=photo)
+        send_data_to_user(message, data)
     else:
         bot.send_message(chat_id=message.chat.id, text='Рядом сохраненных мест нет :(')
 
@@ -192,12 +199,18 @@ def handle_invalid_data(message):
 
 @bot.message_handler(commands=['start', 'help'])
 def start_handler(message):
-    bot.send_message(chat_id=message.chat.id, text=start_command_text)
+    bot.send_message(chat_id=message.chat.id, text=start_command_text, parse_mode='Markdown')
+
+
+@bot.message_handler(commands=['list', ])
+def get_location_list(message):
+    data = get_last_locations(message.chat.id)
+    send_data_to_user(message, data)
 
 
 @bot.message_handler(func=lambda message: True)
 def default_message_handler(message):
-    bot.send_message(chat_id=message.chat.id, text=default_reply + start_command_text)
+    bot.send_message(chat_id=message.chat.id, text=default_reply + start_command_text, parse_mode='Markdown')
 
 
 if __name__ == '__main__':

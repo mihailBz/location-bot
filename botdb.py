@@ -65,6 +65,15 @@ def get_data_by_location(chat_id, location_id):
     return data
 
 
+def get_last_locations(chat_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT location, address, photo from places order by id desc limit 10')
+    data = cursor.fetchall()
+    conn.commit()
+    return data
+
+
 def drop_users_data(chat_id):
     conn = get_connection()
     cursor = conn.cursor()
