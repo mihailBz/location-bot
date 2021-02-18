@@ -1,0 +1,15 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+
+[packages]
+psycopg2-binary = "==2.8.6"
+requests = "==2.7.0"
+six = "==1.15.0"
+pyTelegramBotAPI = "==3.7.3"
+
+[requires]
+python_version = "3.8"
